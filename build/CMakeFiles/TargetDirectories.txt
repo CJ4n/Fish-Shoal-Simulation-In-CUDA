@@ -1,3 +1,0 @@
-/home/jan/Desktop/Fish-Shoal-Simulation-In-CUDA/build/CMakeFiles/shoalTest.dir
-/home/jan/Desktop/Fish-Shoal-Simulation-In-CUDA/build/CMakeFiles/edit_cache.dir
-/home/jan/Desktop/Fish-Shoal-Simulation-In-CUDA/build/CMakeFiles/rebuild_cache.dir
