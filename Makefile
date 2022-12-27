@@ -277,7 +277,7 @@ ALL_LDFLAGS += $(addprefix -Xlinker ,$(LDFLAGS))
 ALL_LDFLAGS += $(addprefix -Xlinker ,$(EXTRA_LDFLAGS))
 
 # Common includes and paths for CUDA
-INCLUDES  := -I./helpers
+INCLUDES  := -I./include
 LIBRARIES :=
 
 ################################################################################
@@ -378,5 +378,4 @@ clean:
 	rm -f fishShoal fishShoal.o
 
 clobber: clean
-
 
