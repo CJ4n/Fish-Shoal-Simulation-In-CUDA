@@ -1,12 +1,9 @@
 # set(CMAKE_C_COMPILER /usr/bin/gcc-9)
 # set(CMAKE_CXX_COMPILER /usr/bin/g++-9)
-set(APP_NAME shoalTest)
+set(APP_NAME fishShoal)
 cmake_minimum_required(VERSION 3.16)
 
-include_directories(include ) 
-
-# find_package(OpenGL REQUIRED)
-# find_package(GLUT REQUIRED)
+include_directories(include includeNvidia) 
 
 add_compile_options(-g -G)
 add_link_options(-L/usr/lib/nvidia-compute-utils-510 -lGL -lGLU -lglut )
