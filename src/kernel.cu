@@ -1,4 +1,4 @@
-#include <stdlib.h>
+// #include <stdlib.h>
 
 #include "kernel.h"
 
@@ -40,18 +40,14 @@ __global__ void update_boids_position(float4 *pos, unsigned int width, unsigned 
     pos[y * width + x] = make_float4(u, w, v, 1.0f);
 }
 
-// Boid *init_boids()
-// {
-//     srand(0);
-//     Boid *boids;
-//     cudaMallocManaged(&boids,sizeof(Boid));
-//     return boids;
-// }
-// struct Boid
-// {
-//     float *x_coords;
-//     float *y_coords;
-// };
+Boid *init_boids()
+{
+    srand(0);
+    Boid *boids;
+    cudaMallocManaged(&boids,sizeof(Boid));
+    return boids;
+}
+
 
 void launch_kernel(float4 *pos, unsigned int mesh_width, unsigned int mesh_height, float time)
 {

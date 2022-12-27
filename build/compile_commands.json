@@ -1,0 +1,12 @@
+[
+{
+  "directory": "/home/jan/Desktop/Fish-Shoal-Simulation-In-CUDA/build",
+  "command": "/usr/bin/nvcc -forward-unknown-to-host-compiler  -I/home/jan/Desktop/Fish-Shoal-Simulation-In-CUDA/include -g -g -G -x cu -c /home/jan/Desktop/Fish-Shoal-Simulation-In-CUDA/src/fishShoal.cu -o CMakeFiles/shoalTest.dir/src/fishShoal.cu.o",
+  "file": "/home/jan/Desktop/Fish-Shoal-Simulation-In-CUDA/src/fishShoal.cu"
+},
+{
+  "directory": "/home/jan/Desktop/Fish-Shoal-Simulation-In-CUDA/build",
+  "command": "/usr/bin/nvcc -forward-unknown-to-host-compiler  -I/home/jan/Desktop/Fish-Shoal-Simulation-In-CUDA/include -g -g -G -x cu -c /home/jan/Desktop/Fish-Shoal-Simulation-In-CUDA/src/kernel.cu -o CMakeFiles/shoalTest.dir/src/kernel.cu.o",
+  "file": "/home/jan/Desktop/Fish-Shoal-Simulation-In-CUDA/src/kernel.cu"
+}
+]
