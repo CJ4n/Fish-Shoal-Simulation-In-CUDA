@@ -317,7 +317,7 @@ void runCuda(struct cudaGraphicsResource **vbo_resource)
     //    dim3 grid(mesh_width / block.x, mesh_height / block.y, 1);
     //    kernel<<< grid, block>>>(dptr, mesh_width, mesh_height, g_fAnim);
 
-    launch_kernel(dptr, mesh_width, mesh_height, g_fAnim,boids);
+    launch_kernel(dptr, mesh_width, mesh_height, g_fAnim, boids);
 
     // unmap buffer object
     checkCudaErrors(cudaGraphicsUnmapResources(1, vbo_resource, 0));
@@ -352,7 +352,7 @@ void runAutoTest(int devID, char **argv, char *ref_file)
     void *imageData = malloc(mesh_width * mesh_height * sizeof(float));
 
     // execute the kernel
-    launch_kernel((float4 *)d_vbo_buffer, mesh_width, mesh_height, g_fAnim,boids);
+    launch_kernel((float4 *)d_vbo_buffer, mesh_width, mesh_height, g_fAnim, boids);
 
     cudaDeviceSynchronize();
     getLastCudaError("launch_kernel failed");
@@ -436,6 +436,7 @@ void display()
     glEnableClientState(GL_VERTEX_ARRAY);
     glColor3f(1.0, 0.0, 0.0);
     glDrawArrays(GL_POINTS, 0, mesh_width * mesh_height);
+    // glDrawArrays(GL_TRIANGLES, 0, mesh_width * mesh_height);
     glDisableClientState(GL_VERTEX_ARRAY);
 
     glutSwapBuffers();
