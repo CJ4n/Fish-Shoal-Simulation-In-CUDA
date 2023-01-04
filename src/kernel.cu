@@ -2,8 +2,9 @@
 #include <iostream>
 #include "kernel.h"
 #include "constants.h"
+#include <stdio.h>
 
-__global__ void simple_vbo_kernel(float3 *pos, unsigned int width, unsigned int height, float time)
+__global__ void simple_vbo_kernel(float3 *pos,  int width,  int height, float time)
 {
     unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
     unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -14,7 +15,7 @@ __global__ void simple_vbo_kernel(float3 *pos, unsigned int width, unsigned int 
     pos[y * width * 3 + x * 3 + 2] = make_float3(0, 0, 0);
 }
 
-__global__ void draw_boids(float3 *pos, Boid *boids, unsigned int width, unsigned int height, float time, int num_boids)
+__global__ void draw_boids(float3 *pos, Boid *boids,  int width,  int height, float time, int num_boids)
 {
     unsigned int gid = blockIdx.x * blockDim.x + threadIdx.x;
     if (gid >= num_boids)
@@ -36,17 +37,25 @@ __global__ void draw_boids(float3 *pos, Boid *boids, unsigned int width, unsigne
     //     // calculate simple sine wave pattern
     //     // float freq = 4.0f;
     //     // float w = sinf(u * freq + time) * cosf(v * freq + time) * 0.5f;
-
+ 
     //     pos[gid *3 ] = make_float3(u, v, 0);
     //     pos[gid *3+1 ]  = make_float3((x + 1) / (float)width, v, 0);
     //    pos[gid *3 +2]  = make_float3(u, (y + 1) / (float)height, 0);
 
-    pos[gid * 3] = make_float3(x/(float)width, y/(float)height, 0);
-    pos[gid * 3 + 1] = make_float3((x + 1)/(float)width,y/(float)height, 0);
-    pos[gid * 3 + 2] = make_float3(x/(float)width,(y+1)/(float)height, 0);
+    // pos[gid * 3] = make_float3(x/(float)width, y/(float)height, 0.0);
+    // pos[gid * 3 + 1] = make_float3((x + 10.0)/(float)width,y/(float)height, 0.0);
+    // pos[gid * 3 + 2] = make_float3(x/(float)width,(y+10.0)/(float)height, 0.0);
+    pos[gid * 3] = make_float3(0.01,0.01, 0.0);
+    pos[gid * 3 + 1] = make_float3(0.1,0.2, 0.0);
+    pos[gid * 3 + 2] = make_float3(0.9,0.9, 0.0);
+    printf("----\n");
+
+    printf("%f, %f, %f\n",pos[gid*3].x,pos[gid*3].y,pos[gid*3].z);
+    printf("%f, %f, %f\n",pos[gid*3+1].x,pos[gid*3+1].y,pos[gid*3+1].z);
+    printf("%f, %f, %f\n",pos[gid*3+2].x,pos[gid*3+2].y,pos[gid*3+2].z);
 }
 
-__global__ void update_boids_position(Boid *boid, unsigned int width, unsigned int height)
+__global__ void update_boids_position(Boid *boid,  int width,  int height)
 {
     const int gid = blockDim.x * blockIdx.x + threadIdx.x;
     if (boid->count <= gid)
@@ -101,7 +110,7 @@ Boid *init_boids()
     return boids;
 }
 
-void launch_kernel(float3 *pos, unsigned int mesh_width, unsigned int mesh_height, float time, Boid *boids)
+void launch_kernel(float3 *pos,  int mesh_width,  int mesh_height, float time, Boid *boids)
 {
 
     // execute the kernel
@@ -110,8 +119,8 @@ void launch_kernel(float3 *pos, unsigned int mesh_width, unsigned int mesh_heigh
     // Boid *boids = init_boids();
     const int num_threads = std::min(1024, num_boids);
     const int num_blocks = std::ceil(num_boids / num_threads);
-    // update_boids_position<<<num_blocks, num_threads>>>(boids, mesh_width, mesh_height);
     // simple_vbo_kernel<<<grid, block>>>(pos, mesh_width, mesh_height, time);
     draw_boids<<<num_blocks, num_threads>>>(pos, boids, mesh_width, mesh_height, time, num_boids);
+    update_boids_position<<<num_blocks, num_threads>>>(boids, mesh_width, mesh_height);
 
 }

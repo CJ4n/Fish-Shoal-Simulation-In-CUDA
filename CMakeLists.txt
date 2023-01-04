@@ -5,8 +5,8 @@ cmake_minimum_required(VERSION 3.16)
 
 include_directories(include includeNvidia) 
 
-add_compile_options(-g -G)
-add_link_options(-L/usr/lib/nvidia-compute-utils-510 -lGL -lGLU -lglut )
+add_compile_options(-g -G -Wall -Wextra)
+add_link_options(-L/usr/lib/nvidia-compute-utils-510 -lGL -lGLU -lglut -Wall -Wextra)
 
 project(CudaApp LANGUAGES CXX CUDA)
 
