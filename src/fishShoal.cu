@@ -305,7 +305,7 @@ bool runTest(int argc, char **argv, char *ref_file)
 void runCuda(struct cudaGraphicsResource **vbo_resource)
 {
     // map OpenGL buffer object for writing from CUDA
-    float4 *dptr;
+    float3 *dptr;
     checkCudaErrors(cudaGraphicsMapResources(1, vbo_resource, 0));
     size_t num_bytes;
     checkCudaErrors(cudaGraphicsResourceGetMappedPointer((void **)&dptr, &num_bytes,
@@ -352,7 +352,7 @@ void runAutoTest(int devID, char **argv, char *ref_file)
     void *imageData = malloc(mesh_width * mesh_height * sizeof(float));
 
     // execute the kernel
-    launch_kernel((float4 *)d_vbo_buffer, mesh_width, mesh_height, g_fAnim, boids);
+    launch_kernel((float3 *)d_vbo_buffer, mesh_width, mesh_height, g_fAnim, boids);
 
     cudaDeviceSynchronize();
     getLastCudaError("launch_kernel failed");
@@ -384,7 +384,7 @@ void createVBO(GLuint *vbo, struct cudaGraphicsResource **vbo_res,
     glBindBuffer(GL_ARRAY_BUFFER, *vbo);
 
     // initialize buffer object
-    unsigned int size = mesh_width * mesh_height * 4 * sizeof(float);
+    unsigned int size = num_boids * 9 * sizeof(float);
     glBufferData(GL_ARRAY_BUFFER, size, 0, GL_DYNAMIC_DRAW);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -435,8 +435,8 @@ void display()
 
     glEnableClientState(GL_VERTEX_ARRAY);
     glColor3f(1.0, 0.0, 0.0);
-    glDrawArrays(GL_POINTS, 0, mesh_width * mesh_height);
-    // glDrawArrays(GL_TRIANGLES, 0, mesh_width * mesh_height);
+    // glDrawArrays(GL_POINTS, 0, mesh_width * mesh_height);
+    glDrawArrays(GL_TRIANGLES, 0, mesh_width * mesh_height);
     glDisableClientState(GL_VERTEX_ARRAY);
 
     glutSwapBuffers();
