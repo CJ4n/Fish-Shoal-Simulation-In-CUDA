@@ -117,7 +117,7 @@ char **pArgv = NULL;
 
 ////////////////////////////////////////////////////////////////////////////////
 // declaration, forward
-bool runTest(int argc, char **argv, char *ref_file);
+bool runTest(int argc, char **argv);
 void cleanup();
 
 // GL functionality
@@ -135,8 +135,6 @@ void timerEvent(int value);
 
 // Cuda functionality
 void runCuda(struct cudaGraphicsResource **vbo_resource);
-void runAutoTest(int devID, char **argv, char *ref_file);
-void checkResultCuda(int argc, char **argv, const GLuint &vbo);
 
 const char *sSDKsample = "simpleGL (VBO)";
 
@@ -176,7 +174,7 @@ int main(int argc, char **argv)
     printf("\n");
 
     boids = init_boids();
-    runTest(argc, argv, ref_file);
+    runTest(argc, argv);
 
     printf("%s completed, returned %s\n", sSDKsample, (g_TotalErrors == 0) ? "OK" : "ERROR!");
     exit(g_TotalErrors == 0 ? EXIT_SUCCESS : EXIT_FAILURE);
@@ -243,7 +241,7 @@ bool initGL(int *argc, char **argv)
 ////////////////////////////////////////////////////////////////////////////////
 //! Run a simple test for CUDA
 ////////////////////////////////////////////////////////////////////////////////
-bool runTest(int argc, char **argv, char *ref_file)
+bool runTest(int argc, char **argv)
 {
     // Create the CUTIL timer
     sdkCreateTimer(&timer);
@@ -251,23 +249,6 @@ bool runTest(int argc, char **argv, char *ref_file)
     // use command-line specified CUDA device, otherwise use device with highest Gflops/s
     int devID = findCudaDevice(argc, (const char **)argv);
 
-    // command line mode only
-    if (ref_file != NULL)
-    {
-        // create VBO
-        checkCudaErrors(cudaMalloc((void **)&d_vbo_buffer, mesh_width * mesh_height * 4 * sizeof(float)));
-
-        // run the cuda part
-        runAutoTest(devID, argv, ref_file);
-
-        // check result of Cuda step
-        checkResultCuda(argc, argv, vbo);
-
-        cudaFree(d_vbo_buffer);
-        d_vbo_buffer = NULL;
-    }
-    else
-    {
         // First initialize OpenGL context, so we can properly set the GL for CUDA.
         // This is necessary in order to achieve optimal performance with OpenGL/CUDA interop.
         if (false == initGL(&argc, argv))
@@ -294,7 +275,6 @@ bool runTest(int argc, char **argv, char *ref_file)
 
         // start rendering mainloop
         glutMainLoop();
-    }
 
     return true;
 }
@@ -317,7 +297,7 @@ void runCuda(struct cudaGraphicsResource **vbo_resource)
     //    dim3 grid(mesh_width / block.x, mesh_height / block.y, 1);
     //    kernel<<< grid, block>>>(dptr, mesh_width, mesh_height, g_fAnim);
 
-    launch_kernel(dptr, mesh_width, mesh_height, g_fAnim, boids);
+    launch_kernel(dptr, boids);
 
     // unmap buffer object
     checkCudaErrors(cudaGraphicsUnmapResources(1, vbo_resource, 0));
@@ -332,44 +312,6 @@ void runCuda(struct cudaGraphicsResource **vbo_resource)
 #define FOPEN(fHandle, filename, mode) (fHandle = fopen(filename, mode))
 #endif
 #endif
-
-void sdkDumpBin2(void *data, unsigned int bytes, const char *filename)
-{
-    printf("sdkDumpBin: <%s>\n", filename);
-    FILE *fp;
-    FOPEN(fp, filename, "wb");
-    fwrite(data, bytes, 1, fp);
-    fflush(fp);
-    fclose(fp);
-}
-
-////////////////////////////////////////////////////////////////////////////////
-//! Run the Cuda part of the computation
-////////////////////////////////////////////////////////////////////////////////
-void runAutoTest(int devID, char **argv, char *ref_file)
-{
-    char *reference_file = NULL;
-    void *imageData = malloc(mesh_width * mesh_height * sizeof(float));
-
-    // execute the kernel
-    launch_kernel((float3 *)d_vbo_buffer, mesh_width, mesh_height, g_fAnim, boids);
-
-    cudaDeviceSynchronize();
-    getLastCudaError("launch_kernel failed");
-
-    checkCudaErrors(cudaMemcpy(imageData, d_vbo_buffer, mesh_width * mesh_height * sizeof(float), cudaMemcpyDeviceToHost));
-
-    sdkDumpBin2(imageData, mesh_width * mesh_height * sizeof(float), "simpleGL.bin");
-    reference_file = sdkFindFilePath(ref_file, argv[0]);
-
-    if (reference_file &&
-        !sdkCompareBin2BinFloat("simpleGL.bin", reference_file,
-                                mesh_width * mesh_height * sizeof(float),
-                                MAX_EPSILON_ERROR, THRESHOLD, pArgv[0]))
-    {
-        g_TotalErrors++;
-    }
-}
 
 ////////////////////////////////////////////////////////////////////////////////
 //! Create VBO
@@ -431,12 +373,13 @@ void display()
 
     // render from the vbo
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glVertexPointer(4, GL_FLOAT, 0, 0);
+    glVertexPointer(3, GL_FLOAT, 0, 0);
 
     glEnableClientState(GL_VERTEX_ARRAY);
     glColor3f(1.0, 0.0, 0.0);
     // glDrawArrays(GL_POINTS, 0, mesh_width * mesh_height);
-    glDrawArrays(GL_TRIANGLES, 0, mesh_width * mesh_height);
+    //to moze cos sie powaic? o co z tym hcodzi?
+    glDrawArrays(GL_TRIANGLES, 0, num_boids*3);
     glDisableClientState(GL_VERTEX_ARRAY);
 
     glutSwapBuffers();
@@ -521,38 +464,3 @@ void motion(int x, int y)
     mouse_old_y = y;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-//! Check if the result is correct or write data to file for external
-//! regression testing
-////////////////////////////////////////////////////////////////////////////////
-void checkResultCuda(int argc, char **argv, const GLuint &vbo)
-{
-    if (!d_vbo_buffer)
-    {
-        checkCudaErrors(cudaGraphicsUnregisterResource(cuda_vbo_resource));
-
-        // map buffer object
-        glBindBuffer(GL_ARRAY_BUFFER, vbo);
-        float *data = (float *)glMapBuffer(GL_ARRAY_BUFFER, GL_READ_ONLY);
-
-        // check result
-        if (checkCmdLineFlag(argc, (const char **)argv, "regression"))
-        {
-            // write file for regression test
-            sdkWriteFile<float>("./data/regression.dat",
-                                data, mesh_width * mesh_height * 3, 0.0, false);
-        }
-
-        // unmap GL buffer object
-        if (!glUnmapBuffer(GL_ARRAY_BUFFER))
-        {
-            fprintf(stderr, "Unmap buffer failed.\n");
-            fflush(stderr);
-        }
-
-        checkCudaErrors(cudaGraphicsGLRegisterBuffer(&cuda_vbo_resource, vbo,
-                                                     cudaGraphicsMapFlagsWriteDiscard));
-
-        SDK_CHECK_ERROR_GL();
-    }
-}

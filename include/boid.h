@@ -1,10 +1,11 @@
 #pragma once
+#include "constants.h"
 
 struct Boid
 {
-    float *x_coords;
-    float *y_coords;
-    float *x_velocity;
-    float *y_velocity;
-    int count;
+    MyType *x_coords;
+    MyType *y_coords;
+    MyType *x_velocity;
+    MyType *y_velocity;
+    // int count;
 };
