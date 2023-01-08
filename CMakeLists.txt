@@ -10,7 +10,7 @@ add_link_options(-L/usr/lib/nvidia-compute-utils-510 -lGL -lGLU -lglut -Wall -We
 
 project(CudaApp LANGUAGES CXX CUDA)
 
-file(GLOB cuda_sources "src/*.cu" )
+file(GLOB cuda_sources src/*.cu)
 
 add_executable(${APP_NAME} ${cuda_sources} )
 

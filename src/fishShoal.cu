@@ -25,20 +25,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/*
-    This example demonstrates how to use the Cuda OpenGL bindings to
-    dynamically modify a vertex buffer using a Cuda kernel.
-
-    The steps are:
-    1. Create an empty vertex buffer object (VBO)
-    2. Register the VBO with Cuda
-    3. Map the VBO for writing from Cuda
-    4. Run Cuda kernel to modify the vertex positions
-    5. Unmap the VBO
-    6. Render the results using OpenGL
-
-    Host code
-*/
 
 // includes, system
 #include <stdlib.h>
@@ -76,9 +62,9 @@
 
 #include <vector_types.h>
 
-#include "kernel.h"
-#include "constants.h"
+#include "config.h"
 #include "boid.h"
+
 #define MAX_EPSILON_ERROR 10.0f
 #define THRESHOLD 0.30f
 #define REFRESH_DELAY 10 // ms
@@ -89,9 +75,6 @@
 // vbo variables
 GLuint vbo;
 struct cudaGraphicsResource *cuda_vbo_resource;
-void *d_vbo_buffer = NULL;
-
-float g_fAnim = 0.0;
 
 // mouse controls
 int mouse_old_x, mouse_old_y;
@@ -104,20 +87,19 @@ StopWatchInterface *timer = NULL;
 // Auto-Verification Code
 int fpsCount = 0; // FPS count for averaging
 int fpsLimit = 1; // FPS limit for sampling
-int g_Index = 0;
 float avgFPS = 0.0f;
 unsigned int frameCount = 0;
 unsigned int g_TotalErrors = 0;
-bool g_bQAReadback = false;
 
-int *pArgc = NULL;
-char **pArgv = NULL;
+const char *sSDKsample = "simpleGL (VBO)";
+char *window_title = "Fish shoal simulation: fps: %3.1f, separtion: %f, alignment: %f, cohision: %f, inertia: %f, interaction radius: %f";
+
+Boid *boids;
 
 #define MAX(a, b) ((a > b) ? a : b)
 
 ////////////////////////////////////////////////////////////////////////////////
-// declaration, forward
-bool runTest(int argc, char **argv);
+bool StartRender(int argc, char **argv);
 void cleanup();
 
 // GL functionality
@@ -132,29 +114,11 @@ void keyboard(unsigned char key, int x, int y);
 void mouse(int button, int state, int x, int y);
 void motion(int x, int y);
 void timerEvent(int value);
-
-// Cuda functionality
+// run cuda computation
 void runCuda(struct cudaGraphicsResource **vbo_resource);
-
-const char *sSDKsample = "simpleGL (VBO)";
-
-///////////////////////////////////////////////////////////////////////////////
-//! Simple kernel to modify vertex positions in sine wave pattern
-//! @param data  data in global memory
-///////////////////////////////////////////////////////////////////////////////
-
-////////////////////////////////////////////////////////////////////////////////
-// Program main
-////////////////////////////////////////////////////////////////////////////////
-
-Boid *boids;
 
 int main(int argc, char **argv)
 {
-    char *ref_file = NULL;
-
-    pArgc = &argc;
-    pArgv = argv;
 
 #if defined(__linux__)
     setenv("DISPLAY", ":0", 0);
@@ -162,24 +126,13 @@ int main(int argc, char **argv)
 
     printf("%s starting...\n", sSDKsample);
 
-    if (argc > 1)
-    {
-        if (checkCmdLineFlag(argc, (const char **)argv, "file"))
-        {
-            // In this mode, we are running non-OpenGL and doing a compare of the VBO was generated correctly
-            getCmdLineArgumentString(argc, (const char **)argv, "file", (char **)&ref_file);
-        }
-    }
-
     printf("\n");
 
-    boids = init_boids();
-    runTest(argc, argv);
+    StartRender(argc, argv);
 
     printf("%s completed, returned %s\n", sSDKsample, (g_TotalErrors == 0) ? "OK" : "ERROR!");
     exit(g_TotalErrors == 0 ? EXIT_SUCCESS : EXIT_FAILURE);
 }
-
 void computeFPS()
 {
     frameCount++;
@@ -195,19 +148,16 @@ void computeFPS()
     }
 
     char fps[256];
-    sprintf(fps, "Cuda GL Interop (VBO): %3.1f fps (Max 100Hz)", avgFPS);
+    sprintf(fps, window_title, avgFPS, factor_separation, factor_alignment, factor_cohesion, factor_intertia, radius);
     glutSetWindowTitle(fps);
 }
-
-////////////////////////////////////////////////////////////////////////////////
-//! Initialize GL
-////////////////////////////////////////////////////////////////////////////////
+// Initialize GL
 bool initGL(int *argc, char **argv)
 {
     glutInit(argc, argv);
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE);
     glutInitWindowSize(window_width, window_height);
-    glutCreateWindow("Cuda GL Interop (VBO)");
+    glutCreateWindow(window_title);
     glutDisplayFunc(display);
     glutKeyboardFunc(keyboard);
     glutMotionFunc(motion);
@@ -237,11 +187,8 @@ bool initGL(int *argc, char **argv)
 
     return true;
 }
-
-////////////////////////////////////////////////////////////////////////////////
-//! Run a simple test for CUDA
-////////////////////////////////////////////////////////////////////////////////
-bool runTest(int argc, char **argv)
+// Start rendering simulation
+bool StartRender(int argc, char **argv)
 {
     // Create the CUTIL timer
     sdkCreateTimer(&timer);
@@ -249,39 +196,46 @@ bool runTest(int argc, char **argv)
     // use command-line specified CUDA device, otherwise use device with highest Gflops/s
     int devID = findCudaDevice(argc, (const char **)argv);
 
-        // First initialize OpenGL context, so we can properly set the GL for CUDA.
-        // This is necessary in order to achieve optimal performance with OpenGL/CUDA interop.
-        if (false == initGL(&argc, argv))
-        {
-            return false;
-        }
+    // First initialize OpenGL context, so we can properly set the GL for CUDA.
+    // This is necessary in order to achieve optimal performance with OpenGL/CUDA interop.
+    if (false == initGL(&argc, argv))
+    {
+        return false;
+    }
 
-        // register callbacks
-        glutDisplayFunc(display);
-        glutKeyboardFunc(keyboard);
-        glutMouseFunc(mouse);
-        glutMotionFunc(motion);
+    // register callbacks
+    glutDisplayFunc(display);
+    glutKeyboardFunc(keyboard);
+    glutMouseFunc(mouse);
+    glutMotionFunc(motion);
 #if defined(__APPLE__) || defined(MACOSX)
-        atexit(cleanup);
+    atexit(cleanup);
 #else
-        glutCloseFunc(cleanup);
+    glutCloseFunc(cleanup);
 #endif
 
-        // create VBO
-        createVBO(&vbo, &cuda_vbo_resource, cudaGraphicsMapFlagsWriteDiscard);
+    // create VBO
+    createVBO(&vbo, &cuda_vbo_resource, cudaGraphicsMapFlagsWriteDiscard);
+    // init boids
+    boids = init_boids();
 
-        // run the cuda part
-        runCuda(&cuda_vbo_resource);
-
-        // start rendering mainloop
-        glutMainLoop();
+    // start rendering mainloop
+    glutMainLoop();
 
     return true;
 }
-
-////////////////////////////////////////////////////////////////////////////////
-//! Run the Cuda part of the computation
-////////////////////////////////////////////////////////////////////////////////
+void launch_kernel(float3 *pos)
+{
+    const int num_threads = std::min(1024, num_boids);
+    const int num_blocks = std::ceil((float)num_boids / (float)num_threads);
+    update_boids_position<<<num_blocks, num_threads>>>(boids, interaction_radius_2, factor_separation, factor_alignment, factor_cohesion, factor_intertia);
+    draw_boids<<<num_blocks, num_threads>>>(pos, boids, num_boids);
+    // for (int boid = 0; boid <num_boids; ++boid)
+    // {
+    //     std::cout << "x:" << boids->coord[boid].x << ", y: " << boids->coord[boid].y << ", x_v: " << boids->velocity[boid].x << ", y_v: " << boids->velocity[boid].y << std::endl;
+    // }
+}
+// Run the Cuda part of the computation
 void runCuda(struct cudaGraphicsResource **vbo_resource)
 {
     // map OpenGL buffer object for writing from CUDA
@@ -290,19 +244,13 @@ void runCuda(struct cudaGraphicsResource **vbo_resource)
     size_t num_bytes;
     checkCudaErrors(cudaGraphicsResourceGetMappedPointer((void **)&dptr, &num_bytes,
                                                          *vbo_resource));
-    // printf("CUDA mapped VBO: May access %ld bytes\n", num_bytes);
 
-    // execute the kernel
-    //    dim3 block(8, 8, 1);
-    //    dim3 grid(mesh_width / block.x, mesh_height / block.y, 1);
-    //    kernel<<< grid, block>>>(dptr, mesh_width, mesh_height, g_fAnim);
-
-    launch_kernel(dptr, boids);
+    // launch cuda computation 
+    launch_kernel(dptr);
 
     // unmap buffer object
     checkCudaErrors(cudaGraphicsUnmapResources(1, vbo_resource, 0));
 }
-
 #ifdef _WIN32
 #ifndef FOPEN
 #define FOPEN(fHandle, filename, mode) fopen_s(&fHandle, filename, mode)
@@ -312,10 +260,7 @@ void runCuda(struct cudaGraphicsResource **vbo_resource)
 #define FOPEN(fHandle, filename, mode) (fHandle = fopen(filename, mode))
 #endif
 #endif
-
-////////////////////////////////////////////////////////////////////////////////
-//! Create VBO
-////////////////////////////////////////////////////////////////////////////////
+// Create VBO
 void createVBO(GLuint *vbo, struct cudaGraphicsResource **vbo_res,
                unsigned int vbo_res_flags)
 {
@@ -336,13 +281,9 @@ void createVBO(GLuint *vbo, struct cudaGraphicsResource **vbo_res,
 
     SDK_CHECK_ERROR_GL();
 }
-
-////////////////////////////////////////////////////////////////////////////////
-//! Delete VBO
-////////////////////////////////////////////////////////////////////////////////
+// Delete VBO
 void deleteVBO(GLuint *vbo, struct cudaGraphicsResource *vbo_res)
 {
-
     // unregister this buffer object with CUDA
     checkCudaErrors(cudaGraphicsUnregisterResource(vbo_res));
 
@@ -351,10 +292,7 @@ void deleteVBO(GLuint *vbo, struct cudaGraphicsResource *vbo_res)
 
     *vbo = 0;
 }
-
-////////////////////////////////////////////////////////////////////////////////
-//! Display callback
-////////////////////////////////////////////////////////////////////////////////
+// Display callback
 void display()
 {
     sdkStartTimer(&timer);
@@ -377,19 +315,16 @@ void display()
 
     glEnableClientState(GL_VERTEX_ARRAY);
     glColor3f(1.0, 0.0, 0.0);
-    // glDrawArrays(GL_POINTS, 0, mesh_width * mesh_height);
-    //to moze cos sie powaic? o co z tym hcodzi?
-    glDrawArrays(GL_TRIANGLES, 0, num_boids*3);
+    glDrawArrays(GL_TRIANGLES, 0, num_boids * 3);
     glDisableClientState(GL_VERTEX_ARRAY);
 
     glutSwapBuffers();
 
-    g_fAnim += 0.01f;
+    // g_fAnim += 0.01f;
 
     sdkStopTimer(&timer);
     computeFPS();
 }
-
 void timerEvent(int value)
 {
     if (glutGetWindow())
@@ -398,7 +333,6 @@ void timerEvent(int value)
         glutTimerFunc(REFRESH_DELAY, timerEvent, 0);
     }
 }
-
 void cleanup()
 {
     sdkDeleteTimer(&timer);
@@ -408,27 +342,88 @@ void cleanup()
         deleteVBO(&vbo, cuda_vbo_resource);
     }
 }
-
-////////////////////////////////////////////////////////////////////////////////
-//! Keyboard events handler
-////////////////////////////////////////////////////////////////////////////////
+// Keyboard events handler
 void keyboard(unsigned char key, int /*x*/, int /*y*/)
 {
     switch (key)
     {
     case (27):
-#if defined(__APPLE__) || defined(MACOSX)
-        exit(EXIT_SUCCESS);
-#else
         glutDestroyWindow(glutGetWindow());
         return;
-#endif
+    case 'q':
+    {
+        factor_separation += change_force_factor_step;
+        return;
+    }
+    case 'a':
+    {
+        factor_separation -= change_force_factor_step;
+        if (factor_separation < 0)
+        {
+            factor_separation = 0;
+        }
+        return;
+    }
+    case 'w':
+    {
+        factor_alignment += change_force_factor_step;
+        return;
+    }
+    case 's':
+    {
+        factor_alignment -= change_force_factor_step;
+        if (factor_alignment < 0)
+        {
+            factor_alignment = 0;
+        }
+        return;
+    }
+    case 'e':
+    {
+        factor_cohesion += change_force_factor_step;
+        return;
+    }
+
+    case 'd':
+    {
+        factor_cohesion -= change_force_factor_step;
+        if (factor_cohesion < 0)
+        {
+            factor_cohesion = 0;
+        }
+        return;
+    }
+    case 'r':
+    {
+        factor_intertia += change_force_factor_step;
+        return;
+    }
+    case 'f':
+    {
+        factor_intertia -= change_force_factor_step;
+        if (factor_intertia < 0)
+        {
+            factor_intertia = 0;
+        }
+        return;
+    }
+    case 't':
+    {
+        radius += chanage_radious_step;
+        return;
+    }
+    case 'g':
+    {
+        if (radius < 0)
+        {
+            radius = 0;
+        }
+        radius -= chanage_radious_step;
+        return;
+    }
     }
 }
-
-////////////////////////////////////////////////////////////////////////////////
-//! Mouse event handlers
-////////////////////////////////////////////////////////////////////////////////
+// Mouse event handlers
 void mouse(int button, int state, int x, int y)
 {
     if (state == GLUT_DOWN)
@@ -443,7 +438,6 @@ void mouse(int button, int state, int x, int y)
     mouse_old_x = x;
     mouse_old_y = y;
 }
-
 void motion(int x, int y)
 {
     float dx, dy;
@@ -463,4 +457,3 @@ void motion(int x, int y)
     mouse_old_x = x;
     mouse_old_y = y;
 }
-

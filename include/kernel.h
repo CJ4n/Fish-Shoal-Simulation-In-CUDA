@@ -1,6 +1,5 @@
-#pragma once
+// #pragma once
 
-#include "boid.h"
+// #include "boid.h"
 
-void launch_kernel(float3 *pos, Boid *boids);
-Boid *init_boids();
+// void launch_kernel(float3 *pos, Boid *boids);
