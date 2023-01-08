@@ -20,3 +20,6 @@ t - increase interaction radius
 g - decrease interaction radius  
 
 space - start/stop animation
+n - reset animation
+
+[Screencast from 08.01.2023 16:35:43.webm](https://user-images.githubusercontent.com/41972182/211205385-976162b2-4c73-45ab-8479-9e173974f838.webm)
