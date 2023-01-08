@@ -12,12 +12,12 @@ Boid *init_boids()
     {
         float x = rand() % box_size;
         float y = rand() % box_size;
-        float z = (is_3d == 1) ? rand() % box_size : 0;
+        float z = (is_3d != 0) ? rand() % box_size : 0;
         boids->coord[boid] = make_float3(x, y, z);
 
         float x_v = rand() % velocity_num_degres;
         float y_v = rand() % velocity_num_degres;
-        float z_v = (is_3d == 1) ? rand() % velocity_num_degres : 0;
+        float z_v = (is_3d != 0) ? rand() % velocity_num_degres : 0;
         float sum_v = x_v + y_v;
         if (sum_v > 0)
         {
@@ -70,9 +70,9 @@ __global__ void draw_boids(float3 *pos, Boid *boids, int num_boids)
     float y_p3 = (y - x_v * size_boid / 2) / (float)mesh_height * 2;
     float z_p3 = (z + z_v * size_boid / 2) / (float)mesh_height * 2;
 
-    pos[gid * 3] = make_float3((float)x_p1 - 1, (float)y_p1 - 1, (is_3d == 1) ? (float)z_p1 - 1 : 1.2);
-    pos[gid * 3 + 1] = make_float3((float)x_p2 - 1, (float)y_p2 - 1, (is_3d == 1) ? (float)z_p2 - 1 : 1.2);
-    pos[gid * 3 + 2] = make_float3((float)x_p3 - 1, (float)y_p3 - 1, (is_3d == 1) ? (float)z_p3 - 1 : 1.2);
+    pos[gid * 3] = make_float3((float)x_p1 - 1, (float)y_p1 - 1, (is_3d != 0) ? (float)z_p1 - 1 : 1.2);
+    pos[gid * 3 + 1] = make_float3((float)x_p2 - 1, (float)y_p2 - 1, (is_3d != 0) ? (float)z_p2 - 1 : 1.2);
+    pos[gid * 3 + 2] = make_float3((float)x_p3 - 1, (float)y_p3 - 1, (is_3d != 0) ? (float)z_p3 - 1 : 1.2);
 }
 
 // __device__ float dist(float x_1, float y_1, float x_2, float y_2)
@@ -113,11 +113,15 @@ __global__ void update_boids_position(Boid *boids, float interaction_radius_2, f
         pos_average.x += neighbour.x;
         pos_average.y += neighbour.y;
         if (is_3d)
+        {
             pos_average.z += neighbour.z;
+        }
         vel_average.x += boids->velocity[idx].x;
         vel_average.y += boids->velocity[idx].y;
         if (is_3d)
+        {
             vel_average.z += boids->velocity[idx].z;
+        }
         count++;
     }
 

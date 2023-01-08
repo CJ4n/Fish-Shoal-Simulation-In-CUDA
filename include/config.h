@@ -1,8 +1,9 @@
 #pragma once
 
 typedef float3 DataType;
+constexpr int is_3d = 0;
 
-constexpr int num_boids = 50000;
+constexpr int num_boids = 10000;
 
 constexpr int window_width = 512 * 3;
 constexpr int window_height = 512 * 3;
@@ -19,8 +20,6 @@ constexpr float size_boid = 20 * 5;
 
 constexpr float change_force_factor_step = 0.05;
 constexpr float chanage_radious_step = 10;
-
-constexpr int is_3d = 0;
 
 extern float velocity;
 extern float radius;

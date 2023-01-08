@@ -225,6 +225,8 @@ bool StartRender(int argc, char **argv)
 }
 void launch_kernel(float3 *pos)
 {
+    //todo:
+    // 1. drawing arrow in 3d
     const int num_threads = std::min(1024, num_boids);
     const int num_blocks = std::ceil((float)num_boids / (float)num_threads);
     update_boids_position<<<num_blocks, num_threads>>>(boids, interaction_radius_2, velocity, factor_separation, factor_alignment, factor_cohesion, factor_intertia);
