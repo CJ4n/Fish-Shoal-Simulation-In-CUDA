@@ -1,9 +1,9 @@
 # Fish-Shoal-Simulation-In-CUDA
 
-Project implements simulation of fishshoal (boids).
-OpenGL part is taken from Nvidia samples repo (https://github.com/NVIDIA/cuda-samples).
+Project implements simulation of fishshoal (boids).  
+OpenGL part is taken from Nvidia samples repo (https://github.com/NVIDIA/cuda-samples).  
 
-Keybindings:
+Keybindings:  
 q - increase separation force  
 a - decrease separation force  
 
