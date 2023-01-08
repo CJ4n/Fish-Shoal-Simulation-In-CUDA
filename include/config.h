@@ -17,8 +17,10 @@ constexpr int mesh_height = base_dim;
 
 constexpr float size_boid = 20 * 5;
 
-constexpr float change_force_factor_step =0.05;
-constexpr float chanage_radious_step=10;
+constexpr float change_force_factor_step = 0.05;
+constexpr float chanage_radious_step = 10;
+
+constexpr int is_3d = 0;
 
 extern float velocity;
 extern float radius;
