@@ -22,4 +22,4 @@ g - decrease interaction radius
 space - start/stop animation
 n - reset animation
 
-[Screencast from 08.01.2023 16:35:43.webm](https://user-images.githubusercontent.com/41972182/211205385-976162b2-4c73-45ab-8479-9e173974f838.webm)
+[fishshaol_animation.webm](https://user-images.githubusercontent.com/41972182/211205432-c673c110-a3b8-4f56-8be9-47f7aa585d26.webm)
