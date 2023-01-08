@@ -50,18 +50,18 @@ __global__ void draw_boids(float3 *pos, Boid *boids, int num_boids)
     float x_v = boids->velocity[gid].x;
     float y_v = boids->velocity[gid].y;
 
-    float x_p1 = (x + x_v * size_boid) / (float)mesh_width;
-    float y_p1 = (y + y_v * size_boid) / (float)mesh_height;
+    float x_p1 = (x + x_v * size_boid) / (float)mesh_width*2;
+    float y_p1 = (y + y_v * size_boid) / (float)mesh_height*2;
 
-    float x_p2 = (x - y_v * size_boid / 2) / (float)mesh_width;
-    float y_p2 = (y + x_v * size_boid / 2) / (float)mesh_height;
+    float x_p2 = (x - y_v * size_boid / 2) / (float)mesh_width*2;
+    float y_p2 = (y + x_v * size_boid / 2) / (float)mesh_height*2;
 
-    float x_p3 = (x + y_v * size_boid / 2) / (float)mesh_width;
-    float y_p3 = (y - x_v * size_boid / 2) / (float)mesh_height;
+    float x_p3 = (x + y_v * size_boid / 2) / (float)mesh_width*2;
+    float y_p3 = (y - x_v * size_boid / 2) / (float)mesh_height *2;
 
-    pos[gid * 3] = make_float3((float)x_p1, (float)y_p1, 1.2);
-    pos[gid * 3 + 1] = make_float3((float)x_p2, (float)y_p2, 1.2);
-    pos[gid * 3 + 2] = make_float3((float)x_p3, (float)y_p3, 1.2);
+    pos[gid * 3] = make_float3((float)x_p1-1, (float)y_p1-1, 1.2);
+    pos[gid * 3 + 1] = make_float3((float)x_p2-1, (float)y_p2-1, 1.2);
+    pos[gid * 3 + 2] = make_float3((float)x_p3-1, (float)y_p3-1, 1.2);
 }
 
 __device__ float dist(float x_1, float y_1, float x_2, float y_2)
@@ -69,7 +69,7 @@ __device__ float dist(float x_1, float y_1, float x_2, float y_2)
     return (x_1 - x_2) * (x_1 - x_2) + (y_1 - y_2) * (y_1 - y_2);
 }
 
-__global__ void update_boids_position(Boid *boids, float interaction_radius_2, float factor_separation,
+__global__ void update_boids_position(Boid *boids, float interaction_radius_2,float velocity, float factor_separation,
                                       float factor_alignment, float factor_cohesion, float factor_intertia)
 {
     const int gid = blockDim.x * blockIdx.x + threadIdx.x;
@@ -81,8 +81,8 @@ __global__ void update_boids_position(Boid *boids, float interaction_radius_2, f
     DataType pos = boids->coord[gid];
     DataType vel = boids->velocity[gid];
 
-    DataType pos_average = make_float2(0, 0);
-    DataType vel_average = make_float2(0, 0);
+    DataType pos_average = make_float3(0, 0,0);
+    DataType vel_average = make_float3(0, 0,0);
     int count = 0;
     DataType new_velocity = vel;
 
@@ -123,14 +123,14 @@ __global__ void update_boids_position(Boid *boids, float interaction_radius_2, f
         DataType sep, coh, ali;
 
         // calculate separation force
-        sep = make_float2(pos.x - pos_average.x, pos.y - pos_average.y);
+        sep = make_float3(pos.x - pos_average.x, pos.y - pos_average.y,);
         float sum_sep = std::abs(sep.x) + std::abs(sep.y);
         if (sum_sep > 0)
         {
             sep.x /= sum_sep;
             sep.y /= sum_sep;
         }
-        DataType separation_force = make_float2(factor_separation * sep.x, factor_separation * sep.y);
+        DataType separation_force = make_float3(factor_separation * sep.x, factor_separation * sep.y);
         // calculate separation force
 
         // calculate alignment force
@@ -169,11 +169,27 @@ __global__ void update_boids_position(Boid *boids, float interaction_radius_2, f
 
     if (new_pos.x >= box_size || new_pos.x <= 0)
     {
+        if (new_pos.x >= box_size)
+        {
+            new_pos.x = box_size;
+        }
+        else
+        {
+            new_pos.x = 0;
+        }
         new_velocity.x = -new_velocity.x;
     }
 
     if (new_pos.y >= box_size || new_pos.y <= 0)
     {
+         if (new_pos.y >= box_size)
+        {
+            new_pos.y = box_size;
+        }
+        else
+        {
+            new_pos.y = 0;
+        }
         new_velocity.y = -new_velocity.y;
     }
     boids->velocity[gid] = new_velocity;

@@ -25,7 +25,6 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
 // includes, system
 #include <stdlib.h>
 #include <stdio.h>
@@ -92,7 +91,7 @@ unsigned int frameCount = 0;
 unsigned int g_TotalErrors = 0;
 
 const char *sSDKsample = "simpleGL (VBO)";
-char *window_title = "Fish shoal simulation: fps: %3.1f, separtion: %f, alignment: %f, cohision: %f, inertia: %f, interaction radius: %f";
+char *window_title = "Fish shoal simulation (%d fishes): fps: %3.1f, separtion: %f, alignment: %f, cohision: %f, inertia: %f, interaction radius: %f, velocity: %f";
 
 Boid *boids;
 
@@ -148,7 +147,7 @@ void computeFPS()
     }
 
     char fps[256];
-    sprintf(fps, window_title, avgFPS, factor_separation, factor_alignment, factor_cohesion, factor_intertia, radius);
+    sprintf(fps, window_title,num_boids, avgFPS, factor_separation, factor_alignment, factor_cohesion, factor_intertia, radius,velocity);
     glutSetWindowTitle(fps);
 }
 // Initialize GL
@@ -181,7 +180,7 @@ bool initGL(int *argc, char **argv)
     // projection
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluPerspective(60.0, (GLfloat)window_width / (GLfloat)window_height, 0.1, 10.0);
+    gluPerspective(60.0, (GLfloat)window_width / (GLfloat)window_height, 0.1, 100.0);
 
     SDK_CHECK_ERROR_GL();
 
@@ -228,7 +227,7 @@ void launch_kernel(float3 *pos)
 {
     const int num_threads = std::min(1024, num_boids);
     const int num_blocks = std::ceil((float)num_boids / (float)num_threads);
-    update_boids_position<<<num_blocks, num_threads>>>(boids, interaction_radius_2, factor_separation, factor_alignment, factor_cohesion, factor_intertia);
+    update_boids_position<<<num_blocks, num_threads>>>(boids, interaction_radius_2, velocity, factor_separation, factor_alignment, factor_cohesion, factor_intertia);
     draw_boids<<<num_blocks, num_threads>>>(pos, boids, num_boids);
     // for (int boid = 0; boid <num_boids; ++boid)
     // {
@@ -245,7 +244,7 @@ void runCuda(struct cudaGraphicsResource **vbo_resource)
     checkCudaErrors(cudaGraphicsResourceGetMappedPointer((void **)&dptr, &num_bytes,
                                                          *vbo_resource));
 
-    // launch cuda computation 
+    // launch cuda computation
     launch_kernel(dptr);
 
     // unmap buffer object
@@ -298,7 +297,10 @@ void display()
     sdkStartTimer(&timer);
 
     // run CUDA kernel to generate vertex positions
-    runCuda(&cuda_vbo_resource);
+    if (animate)
+    {
+        runCuda(&cuda_vbo_resource);
+    }
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -347,7 +349,7 @@ void keyboard(unsigned char key, int /*x*/, int /*y*/)
 {
     switch (key)
     {
-    case (27):
+    case (27): // esc
         glutDestroyWindow(glutGetWindow());
         return;
     case 'q':
@@ -414,11 +416,31 @@ void keyboard(unsigned char key, int /*x*/, int /*y*/)
     }
     case 'g':
     {
+        radius -= chanage_radious_step;
         if (radius < 0)
         {
             radius = 0;
         }
-        radius -= chanage_radious_step;
+        return;
+    }
+    case 32: // space
+    {
+        animate = !animate;
+        return;
+    }
+    case 'n':
+    {
+        boids = init_boids();
+        return;
+    }
+    case 'y':
+    {
+        velocity += change_velocity_step;
+        return;
+    }
+    case 'h':
+    {
+        velocity -= change_velocity_step;
         return;
     }
     }
