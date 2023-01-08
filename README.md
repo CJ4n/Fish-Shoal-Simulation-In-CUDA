@@ -18,3 +18,5 @@ f - decrease inertia force
 
 t - increase interaction radius  
 g - decrease interaction radius  
+
+space - start/stop animation
