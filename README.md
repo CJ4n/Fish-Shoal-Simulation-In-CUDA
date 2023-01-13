@@ -19,7 +19,13 @@ f - decrease inertia force
 t - increase interaction radius  
 g - decrease interaction radius  
 
+y - increase boid's velocity
+h - decrease boid's velocity  
+
+
 space - start/stop animation
 n - reset animation
+tab - change betten cpu and gpu rendering
+esc - close app
 
 [fishshaol_animation.webm](https://user-images.githubusercontent.com/41972182/211205432-c673c110-a3b8-4f56-8be9-47f7aa585d26.webm)
