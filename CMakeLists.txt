@@ -5,7 +5,7 @@ include_directories(include includeNvidia)
 
 add_compile_options(-Wall -Wextra)
 add_link_options(-L/usr/lib/nvidia-compute-utils-510 -lGL -lGLU -lglut -Wall -Wextra)
-
+# set(CMAKE_CUDA_SEPARABLE_COMPILATION ON)
 project(FishShoal LANGUAGES CXX CUDA)
 
 file(GLOB cuda_sources src/*.cu)

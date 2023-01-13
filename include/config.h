@@ -3,7 +3,7 @@
 typedef float3 DataType;
 constexpr int is_3d = 0;
 
-constexpr int num_boids = 10000;
+constexpr int num_boids = 4000;
 
 constexpr int window_width = 512 * 3;
 constexpr int window_height = 512 * 3;
@@ -21,6 +21,8 @@ constexpr float size_boid = 20 * 5;
 constexpr float change_force_factor_step = 0.05;
 constexpr float chanage_radious_step = 10;
 
+constexpr bool advanced_interaction_scope=false;
+
 extern float velocity;
 extern float radius;
 extern float interaction_radius_2;
@@ -29,3 +31,4 @@ extern float factor_alignment;
 extern float factor_cohesion;
 extern float factor_intertia;
 extern bool animate;
+extern bool gpu_render;

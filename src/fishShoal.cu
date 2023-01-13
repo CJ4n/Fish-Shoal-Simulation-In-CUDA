@@ -63,6 +63,10 @@
 
 #include "config.h"
 #include "boid.h"
+#include "draw_boids_cpu.h"
+#include "update_boids_cpu.h"
+#include "draw_boids_gpu.h"
+#include "update_boids_gpu.h"
 
 #define MAX_EPSILON_ERROR 10.0f
 #define THRESHOLD 0.30f
@@ -91,7 +95,7 @@ unsigned int frameCount = 0;
 unsigned int g_TotalErrors = 0;
 
 const char *sSDKsample = "simpleGL (VBO)";
-char *window_title = "Fish shoal simulation (%d fishes): fps: %3.1f, separtion: %f, alignment: %f, cohision: %f, inertia: %f, interaction radius: %f, velocity: %f";
+char *window_title = "Fish shoal simulation on %s (%d fishes): fps: %3.1f, separtion: %f, alignment: %f, cohision: %f, inertia: %f, interaction radius: %f, velocity: %f";
 
 Boid *boids;
 
@@ -147,7 +151,7 @@ void computeFPS()
     }
 
     char fps[256];
-    sprintf(fps, window_title,num_boids, avgFPS, factor_separation, factor_alignment, factor_cohesion, factor_intertia, radius,velocity);
+    sprintf(fps, window_title,gpu_render?"GPU":"CPU", num_boids, avgFPS, factor_separation, factor_alignment, factor_cohesion, factor_intertia, radius, velocity);
     glutSetWindowTitle(fps);
 }
 // Initialize GL
@@ -207,11 +211,7 @@ bool StartRender(int argc, char **argv)
     glutKeyboardFunc(keyboard);
     glutMouseFunc(mouse);
     glutMotionFunc(motion);
-#if defined(__APPLE__) || defined(MACOSX)
-    atexit(cleanup);
-#else
     glutCloseFunc(cleanup);
-#endif
 
     // create VBO
     createVBO(&vbo, &cuda_vbo_resource, cudaGraphicsMapFlagsWriteDiscard);
@@ -220,21 +220,16 @@ bool StartRender(int argc, char **argv)
 
     // start rendering mainloop
     glutMainLoop();
-
     return true;
 }
 void launch_kernel(float3 *pos)
 {
-    //todo:
-    // 1. drawing arrow in 3d
+    // todo:
+    //  1. drawing arrow in 3d
     const int num_threads = std::min(1024, num_boids);
     const int num_blocks = std::ceil((float)num_boids / (float)num_threads);
     update_boids_position<<<num_blocks, num_threads>>>(boids, interaction_radius_2, velocity, factor_separation, factor_alignment, factor_cohesion, factor_intertia);
     draw_boids<<<num_blocks, num_threads>>>(pos, boids, num_boids);
-    // for (int boid = 0; boid <num_boids; ++boid)
-    // {
-    //     std::cout << "x:" << boids->coord[boid].x << ", y: " << boids->coord[boid].y << ", x_v: " << boids->velocity[boid].x << ", y_v: " << boids->velocity[boid].y << std::endl;
-    // }
 }
 // Run the Cuda part of the computation
 void runCuda(struct cudaGraphicsResource **vbo_resource)
@@ -252,6 +247,19 @@ void runCuda(struct cudaGraphicsResource **vbo_resource)
     // unmap buffer object
     checkCudaErrors(cudaGraphicsUnmapResources(1, vbo_resource, 0));
 }
+
+void runCpu()
+{
+    float3 *pos = (float3 *)malloc(sizeof(float3) * 3 * num_boids);
+    if(pos==NULL){
+        printf("malloc failed");
+        exit(1);
+    }
+    update_boids_cpu(boids);
+    draw_boids_cpu(pos, boids);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(float3) * 3 * num_boids, pos, GL_STATIC_DRAW);
+}
+
 #ifdef _WIN32
 #ifndef FOPEN
 #define FOPEN(fHandle, filename, mode) fopen_s(&fHandle, filename, mode)
@@ -293,6 +301,7 @@ void deleteVBO(GLuint *vbo, struct cudaGraphicsResource *vbo_res)
 
     *vbo = 0;
 }
+
 // Display callback
 void display()
 {
@@ -301,7 +310,14 @@ void display()
     // run CUDA kernel to generate vertex positions
     if (animate)
     {
-        runCuda(&cuda_vbo_resource);
+        if (gpu_render)
+        {
+            runCuda(&cuda_vbo_resource);
+        }
+        else
+        {
+            runCpu();
+        }
     }
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -353,6 +369,7 @@ void keyboard(unsigned char key, int /*x*/, int /*y*/)
     {
     case (27): // esc
         glutDestroyWindow(glutGetWindow());
+        free_boids(boids);
         return;
     case 'q':
     {
@@ -443,6 +460,11 @@ void keyboard(unsigned char key, int /*x*/, int /*y*/)
     case 'h':
     {
         velocity -= change_velocity_step;
+        return;
+    }
+      case 9: // tab
+    {
+        gpu_render=!gpu_render;
         return;
     }
     }
