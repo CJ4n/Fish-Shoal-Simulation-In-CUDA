@@ -40,7 +40,7 @@ __global__ void update_boids_position(Boid *boids, float interaction_radius_2, f
     for (int idx = 0; idx < num_boids; ++idx)
     {
         DataType neighbour = boids->coord[idx];
-        float d = (pos.x - neighbour.x) * (pos.x - neighbour.x) + (pos.y - neighbour.y) * (pos.y - neighbour.y) + (pos.z - neighbour.z) * (pos.z - neighbour.z);
+        // float d = (pos.x - neighbour.x) * (pos.x - neighbour.x) + (pos.y - neighbour.y) * (pos.y - neighbour.y) + (pos.z - neighbour.z) * (pos.z - neighbour.z);
         // if (d > interaction_radius_2)
         if (interaction_scope_gpu(pos,neighbour,vel) > interaction_radius_2)
         {

@@ -16,7 +16,7 @@ static constexpr int box_size = base_dim;
 static constexpr int mesh_width = base_dim;
 static constexpr int mesh_height = base_dim;
 
-static constexpr float size_boid = 20 * 5;
+static constexpr float size_boid = 20 * 5*2;
 
 static constexpr float change_force_factor_step = 0.05;
 static constexpr float chanage_radious_step = 10;
